@@ -1,0 +1,21 @@
+{
+  "name": "QuickFind",
+  "description": "Finds stuff quick.",
+  "version": "0.1",
+  "manifest_version": 2,
+  "browser_action": {
+    "default_popup": "search_popup.html"
+  },
+  "permissions": [
+      "tabs", "activeTab", "<all_urls>"
+  ],
+  "commands": {
+    "_execute_browser_action": {
+      "description" : "Press Ctrl+Period to open search",
+      "suggested_key": {
+        "default": "Ctrl+Period",
+        "mac": "MacCtrl+Period"
+      }
+    }
+  }
+}
