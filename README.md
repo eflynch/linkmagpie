@@ -8,14 +8,11 @@ the query.
 **Default Keybindings**
 
 Common:
-Ctrl-.   opens up search
-Return   follow focused link
-Alt      switch modes
-
-In Text mode:
-Text entered in box is query
+- Ctrl + '.'   opens up search
+- Return       follow focused link
+- Alt          switch modes (Query/Control)
 
 In Control mode:
-n        focus next link
-p        focus previous link
+- n            focus next link
+- p            focus previous link
 
