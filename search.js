@@ -1,32 +1,42 @@
+/* Linkmagpie's business */
+
+
+/* First add contains method to strings if they don't have it */
 if (!String.prototype.contains) {
     String.prototype.contains = function(s, i) {
         return this.indexOf(s, i) != -1;
     }
 }
 
+
+/* Global dictionary for saving the old state */
+var original_store = {};
+
+
+/* Highlight functions */
 function focus_highlight(r){
+    if (r.el in original_store){
+        r.el.innerHTML = original_store[r.el];
+    } else {
+        original_store[r.el] = r.el.innerHTML; 
+    }
     r.el.innerHTML = r.highlighted_text;
     r.el.innerHTML = "<span class='linkmagpie' style='color: #909090; background-color: #FF8800;'>" + r.el.innerHTML + "</span>";
     r.el.scrollIntoView(false);
 }
-
 function highlight(r){
+    original_store[r.el] = r.el.innerHTML;
     r.el.innerHTML = r.highlighted_text;
     r.el.innerHTML = "<span class='linkmagpie' style='color: #909090; background-color: #FFFF00;'>" + r.el.innerHTML + "</span>";
 }
-
 function unhighlight(r){
-    var magpies = r.el.getElementsByClassName("linkmagpie");
-    while (magpies.length > 0){
-        magpies[0].outerHTML = magpies[0].innerHTML;
-    }
+    r.el.innerHTML = original_store[r.el];
 }
 
 
 var focus = null;
 var l = document.links;
 var results = [];
-
 
 function executeFuzzy(searchText){
     var searchSet = l;
@@ -55,6 +65,7 @@ function executeFuzzy(searchText){
 }
 
 
+/* Message Listener */
 chrome.runtime.onMessage.addListener(function(message,sender,sendResponse){
     if (message.method == "go"){
         if(focus){
