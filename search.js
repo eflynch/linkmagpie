@@ -1,6 +1,5 @@
 /* Linkmagpie's business */
 
-
 /* First add contains method to strings if they don't have it */
 if (!String.prototype.contains) {
     String.prototype.contains = function(s, i) {
