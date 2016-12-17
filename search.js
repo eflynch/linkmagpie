@@ -7,113 +7,14 @@ if (!String.prototype.contains) {
     }
 }
 
-
-/* Global dictionary for saving the old state */
-var original_store = {};
-
-
-/* Highlight functions */
-function focus_highlight(r){
-    if (r.el in original_store){
-        r.el.innerHTML = original_store[r.el];
-    } else {
-        original_store[r.el] = r.el.innerHTML; 
-    }
-    r.el.innerHTML = r.highlighted_text;
-    r.el.innerHTML = "<span class='linkmagpie' style='color: #909090; background-color: #FF8800;'>" + r.el.innerHTML + "</span>";
-    r.el.scrollIntoView(false);
-}
-function highlight(r){
-    original_store[r.el] = r.el.innerHTML;
-    r.el.innerHTML = r.highlighted_text;
-    r.el.innerHTML = "<span class='linkmagpie' style='color: #909090; background-color: #FFFF00;'>" + r.el.innerHTML + "</span>";
-}
-function unhighlight(r){
-    r.el.innerHTML = original_store[r.el];
-}
-
-
-var focus = null;
-var l = document.links;
-var results = [];
-
-function executeFuzzy(searchText){
-    var searchSet = l;
-    var query = searchText;
-
-    for (var i=0; i<results.length;i++){
-        unhighlight(results[i]);
-    }
-
-    results = fuzzyMatch(searchSet, query);
-    if (results.length > 0){
-        focus = results[0];
-    } else {
-        focus = null;
-    }
-
-    for (var i=0; i<results.length; i++){
-        if (results[i] != focus){
-            highlight(results[i]);
-        }
-    }
-    if (focus){
-        focus_highlight(focus);
-    }
-
-}
-
-
-/* Message Listener */
-chrome.runtime.onMessage.addListener(function(message,sender,sendResponse){
-    if (message.method == "go"){
-        if(focus){
-            window.location.href = focus.el.href;
-        }
-    } else if (message.method == "next"){
-        for(var i=0; i<results.length-1;i++){
-            var r = results[i];
-            var next_r = results[i+1];
-            if (focus){
-                if (focus == r){
-                    unhighlight(focus);
-                    highlight(focus);
-                    focus = next_r;
-                    unhighlight(focus);
-                    focus_highlight(focus);
-                    break;
-                }
-            }
-        }
-    } else if (message.method == "prev"){
-        for(var i=1; i<results.length;i++){
-            var r = results[i];
-            var prev_r = results[i-1];
-            if (focus){
-                if (focus == r){
-                    unhighlight(focus);
-                    highlight(focus);
-                    focus = prev_r;
-                    unhighlight(focus);
-                    focus_highlight(focus);
-                    break;
-                }
-            }
-        }
-    } else if  (message.method == "search"){
-        searchText = message.searchText;
-        //executeSearch(searchText);
-        executeFuzzy(searchText);
-    }
-});
-
-
+// Define fuzzyMatch
 function fuzzyMatch(searchSet, query) {
-    var tokens = query.toLowerCase().split(''),
-        matches = [];
+    var tokens = query.toLowerCase().split('');
+    var matches = [];
 
-    for (var i = 0 ; i<searchSet.length; i++){
+    for (var i = 0 ; i < searchSet.length; i++){
         var el = searchSet[i];
+
         var tokenIndex = 0,
             stringIndex = 0,
             matchWithHighlights = '',
@@ -155,5 +56,176 @@ function fuzzyMatch(searchSet, query) {
 }
 
 function match_highlight(string) {
-    return '<span class="linkmagpie" style="color: #000000">' + string + '</span>';
+    return '<span class="linkmagpielet" style="color: #000000">' + string + '</span>';
 }
+
+
+/* Define LinkMagpie Class */
+class LinkMagpie {
+    constructor() {
+        this.changes = {};
+        this.focus = null;
+        this.links = document.links;
+        this.results = [];
+
+
+        this.focus_highlight = this.focus_highlight.bind(this);
+        this.highlight = this.highlight.bind(this);
+        this.unhighlight = this.unhighlight.bind(this);
+
+        this.setFocus = this.setFocus.bind(this);
+        this.followFocus = this.followFocus.bind(this);
+        this.focusNext = this.focusNext.bind(this);
+        this.focusPrev = this.focusPrev.bind(this);
+        this.unhighlightAll = this.unhighlightAll.bind(this);
+
+        this.executeFuzzy = this.executeFuzzy.bind(this);
+    }
+
+    focus_highlight(r){
+        var highlight = document.createElement("SPAN");
+        highlight.innerHTML = r.highlighted_text;
+        highlight.style.position = "absolute";
+        highlight.style.top = 0;
+        highlight.style.left = 0;
+        highlight.style.zIndex = 1000;
+        highlight.style.color = "#909090";
+        highlight.style.backgroundColor ="#FF8800";
+        highlight.style.boxShadow = "4px 4px 5px #000000";
+        highlight.className = "linkmagpie";
+
+        r.el.style.position = "relative";
+        r.el.appendChild(highlight);
+        r.el.scrollIntoView(false);
+    }
+
+    highlight(r){
+        var highlight = document.createElement("SPAN");
+        highlight.innerHTML = r.highlighted_text;
+        highlight.style.position = "absolute";
+        highlight.style.top = 0;
+        highlight.style.left = 0;
+        highlight.style.zIndex = 1000;
+        highlight.style.color = "#909090";
+        highlight.style.backgroundColor ="#FFFF00";
+        highlight.className = "linkmagpie";
+
+        r.el.style.position = "relative";
+        r.el.appendChild(highlight);
+        
+    }
+
+    unhighlight(r){
+        var spans = r.el.getElementsByClassName("linkmagpie");
+        for (var i=0; i < spans.length; i++){
+            spans[i].parentNode.removeChild(spans[i]);
+        }
+    }
+
+    unhighlightAll(){
+        this.results.forEach(this.unhighlight);
+    }
+
+
+    executeFuzzy(searchText){
+
+        // Unhighlight old results
+        for (var i=0; i<this.results.length;i++){
+            this.unhighlight(this.results[i]);
+        }
+        this.focus = null;
+
+        // Get new Results
+        this.results = fuzzyMatch(this.links, searchText);
+
+        // Set new Focus if possible
+        if (this.results.length > 0){
+            this.setFocus(this.results[0]);
+        }
+
+        // Highlight all non focus Results
+        for (var i=0; i<this.results.length; i++){
+            if (this.results[i] !== this.focus){
+                this.highlight(this.results[i]);
+            }
+        }
+    }
+
+    setFocus(r) {
+        var old_focus = this.focus;
+        if (old_focus === r){
+            return;
+        }
+
+        if (old_focus !== null){
+            this.unhighlight(old_focus);
+            this.highlight(old_focus);
+        }
+
+        if (r === null){
+            this.focus = null;
+            return;
+        }
+
+        this.unhighlight(r);
+        this.focus_highlight(r)
+        this.focus = r;
+    }
+
+    followFocus() {
+        if (this.focus){
+            window.location.href = this.focus.el.href;
+        }
+    }
+
+    focusNext(){
+        if (!this.focus || !this.results.length){
+            return;
+        }
+
+        var focusIndex = this.results.indexOf(this.focus);
+        if (focusIndex < this.results.length - 1){
+            this.setFocus(this.results[focusIndex + 1]);
+        }
+    }
+
+    focusPrev(){
+        if (!this.focus || !this.results.length){
+            return;
+        }
+        var focusIndex = this.results.indexOf(this.focus);
+        if (focusIndex > 0){
+            this.setFocus(this.results[focusIndex - 1]);
+        }
+    }
+}
+
+
+window.LM = new LinkMagpie();
+
+
+chrome.runtime.onConnect.addListener(function(port){
+    console.assert(port.name == "linkmagpie");
+    /* Message Listener */
+    port.onMessage.addListener(function(message){
+        if (message.method == "go"){
+            LM.followFocus();
+        } else if (message.method == "next"){
+            LM.focusNext();
+        } else if (message.method == "prev"){
+            LM.focusPrev();
+        } else if (message.method == "search"){
+            LM.executeFuzzy(message.searchText);
+        }
+    });
+    port.onDisconnect.addListener(function(port){
+        LM.unhighlightAll();
+    });
+});
+
+
+
+
+
+
+
