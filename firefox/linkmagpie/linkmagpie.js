@@ -86,27 +86,45 @@ let clear_highlights = () => {
     });
 };
 
+let createHighlight = (highlighted_text, left, top, isFocus) => {
+    let cover = document.createElement("span");
+    cover.style.position = "absolute";
+    cover.style.left = left + "px";
+    cover.style.top = top + "px";
+    cover.style.fontSize = "20px";
+    if (isFocus) {
+        cover.style.backgroundColor = "yellow"
+        cover.style.color = "gray";
+    } else {
+        cover.style.backgroundColor = "white"
+        cover.style.color = "gray";
+    }
+    cover.style.border = "1px black solid";
+    cover.style.zIndex = "1000000000";
+    cover.className = "linkmagpie";
+    cover.innerHTML = highlighted_text;
+    return cover;
+};
+
+let createInput = () => {
+    let input = document.createElement("input");
+    input.style.position = "fixed";
+    input.style.right = "20px";
+    input.style.top = "20px";
+    input.style.fontSize = "30px";
+    input.style.zIndex = "10000000000";
+    return input;
+}
+
 let apply_highlights = (matches, focus) => {
     clear_highlights();
     matches.forEach((match) =>{
         let el = match.el;
         let rect = el.getBoundingClientRect();
-        let cover = document.createElement("span");
-        cover.style.position = "absolute";
-        cover.style.left = rect.left + window.scrollX + "px";
-        cover.style.top = rect.top + window.scrollY + "px";
-        cover.style.fontSize = "20px";
-        if (match === focus) {
-            cover.style.backgroundColor = "yellow"
-            cover.style.color = "gray";
-        } else {
-            cover.style.backgroundColor = "white"
-            cover.style.color = "gray";
-        }
-        cover.style.border = "1px black solid";
-        cover.style.zIndex = "1000000000";
-        cover.className = "linkmagpie";
-        cover.innerHTML = match.highlighted_text;
+        let cover = createHighlight(match.highlighted_text,
+                                    rect.left + window.scrollX,
+                                    rect.top + window.scrollY,
+                                    match === focus);
         document.body.appendChild(cover);
         if (match === focus) {
             cover.scrollIntoView({"block": "center", inline: "nearest"});
@@ -118,14 +136,8 @@ let state = "off";
 
 let toggleOn = () => {
     let clickables = getAllClickables();
+    let imput = createInput(); 
 
-    let input = document.createElement("input");
-
-    input.style.position = "fixed";
-    input.style.right = "20px";
-    input.style.top = "20px";
-    input.style.fontSize = "30px";
-    input.style.zIndex = "10000000000";
     document.body.appendChild(input);
     input.focus();
 
@@ -136,7 +148,6 @@ let toggleOn = () => {
             e.preventDefault();
         }
     };
-
     input.onkeyup = (e) => {
         if (e.code === "Enter") {
             followFocus(focus);
@@ -166,7 +177,6 @@ let toggleOn = () => {
         }
         apply_highlights(matches, focus);
     };
-
     state = input;
 };
 
@@ -188,11 +198,6 @@ document.addEventListener('keyup', (e) => {
     if (e.code === "Escape") {
         if (state !== "off") {
             toggleOff();
-        }
-    }
-    if (e.code === "Alt") {
-        if (state !== "off") {
-            state.focus();
         }
     }
 });
