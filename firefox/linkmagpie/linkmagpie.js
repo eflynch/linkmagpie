@@ -11,15 +11,17 @@ let fuzzyMatch = (searchSet, query, highlighter) => {
         let matchWithHighlights = '';
         let matchedPositions = [];
 
-        // TODO: fix the fact that this destroys structure of links.
         let text = "";
-        if (el.text !== undefined) {
+        if (el.text !== undefined && el.text) {
             text = el.text;
-        } else if (el.value !== undefined) {
+        } else if (el.value !== undefined && el.value) {
             text = el.value;
+        } else if (el.innerText !== undefined) {
+            text = el.innerText;
         }
 
         if (!text){
+            console.log("shit");
             return;
         }
 
@@ -106,6 +108,9 @@ let apply_highlights = (matches, focus) => {
         cover.className = "linkmagpie";
         cover.innerHTML = match.highlighted_text;
         document.body.appendChild(cover);
+        if (match === focus) {
+            cover.scrollIntoView({"block": "center", inline: "nearest"});
+        }
     });
 };
 
@@ -133,11 +138,6 @@ let toggleOn = () => {
     };
 
     input.onkeyup = (e) => {
-        if (e.code === "Comma" && e.ctrlKey) {
-            toggleOff();
-            return;
-        }
-
         if (e.code === "Enter") {
             followFocus(focus);
             return;
@@ -154,6 +154,7 @@ let toggleOn = () => {
                 focus = null;
             }
         } else {
+            let query = e.target.value;
             matches = fuzzyMatch(clickables, query, (string) => {
                 return `<span class="linkmagpielet" style="color: #000000">${string}</span>`;
             });
@@ -172,18 +173,21 @@ let toggleOn = () => {
 let toggleOff = () => {
     clear_highlights();
     document.body.removeChild(state);
-    state = "almost-off";
+    state = "off";
 };
 
 document.addEventListener('keyup', (e) => {
     if (e.code === "Comma" && e.ctrlKey){
-        if (state === "almost-off"){
-            state = "off";
-        } else if (state === "off") {
+        if (state === "off") {
             toggleOn();
         } else {
             toggleOff();
-            state = "off";
+            toggleOn();
+        }
+    }
+    if (e.code === "Escape") {
+        if (state !== "off") {
+            toggleOff();
         }
     }
     if (e.code === "Alt") {
