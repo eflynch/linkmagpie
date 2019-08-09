@@ -1,14 +1,13 @@
 function isHidden(el) {
     return (el.offsetParent === null)
 }
-
 let fuzzyMatch = (searchSet, query, highlighter) => {
     let tokens = query.toLowerCase().split('');
     let matches = [];
     searchSet.forEach((el) => {
         let tokenIndex = 0;
         let stringIndex = 0;
-        let matchWithHighlights = '';
+        let matchWithHighlights = document.createElement("span");
         let matchedPositions = [];
 
         let text = "";
@@ -21,7 +20,6 @@ let fuzzyMatch = (searchSet, query, highlighter) => {
         }
 
         if (!text){
-            console.log("shit");
             return;
         }
 
@@ -29,16 +27,16 @@ let fuzzyMatch = (searchSet, query, highlighter) => {
 
         while (stringIndex < string.length) {
             if (string[stringIndex] === tokens[tokenIndex]) {
-                matchWithHighlights += highlighter(text[stringIndex]);
+                matchWithHighlights.appendChild(highlighter(text[stringIndex]));
                 matchedPositions.push(stringIndex);
                 tokenIndex++;
                 if (tokenIndex >= tokens.length) {
+                    let endText = text.slice(stringIndex + 1);
+                    matchWithHighlights.appendChild(document.createTextNode(endText));
                     matches.push({
                         el: el,
                         text: text,
-                        highlighted_text: matchWithHighlights + text.slice(
-                            stringIndex + 1
-                        ),
+                        highlightedElement: matchWithHighlights,
                         positions: matchedPositions
                     });
 
@@ -46,7 +44,7 @@ let fuzzyMatch = (searchSet, query, highlighter) => {
                 }
             }
             else {
-                matchWithHighlights += text[stringIndex];
+                matchWithHighlights.appendChild(document.createTextNode(text[stringIndex]));
             }
 
             stringIndex++;
@@ -71,10 +69,8 @@ let followFocus = (match) => {
     }
 
     if (match.el.href !== undefined) {
-        console.log(match.el.href);
         window.location.href = match.el.href;
     } else if (match.el.click !== undefined) {
-        console.log(match.el.click);
         match.el.click();
     }
 };
@@ -86,7 +82,7 @@ let clear_highlights = () => {
     });
 };
 
-let createHighlight = (highlighted_text, left, top, isFocus) => {
+let createHighlight = (highlightedElement, left, top, isFocus) => {
     let cover = document.createElement("span");
     cover.style.position = "absolute";
     cover.style.left = left + "px";
@@ -102,7 +98,7 @@ let createHighlight = (highlighted_text, left, top, isFocus) => {
     cover.style.border = "1px black solid";
     cover.style.zIndex = "1000000000";
     cover.className = "linkmagpie";
-    cover.innerHTML = highlighted_text;
+    cover.appendChild(highlightedElement);
     return cover;
 };
 
@@ -121,7 +117,7 @@ let apply_highlights = (matches, focus) => {
     matches.forEach((match) =>{
         let el = match.el;
         let rect = el.getBoundingClientRect();
-        let cover = createHighlight(match.highlighted_text,
+        let cover = createHighlight(match.highlightedElement,
                                     rect.left + window.scrollX,
                                     rect.top + window.scrollY,
                                     match === focus);
@@ -136,7 +132,7 @@ let state = "off";
 
 let toggleOn = () => {
     let clickables = getAllClickables();
-    let imput = createInput(); 
+    let input = createInput(); 
 
     document.body.appendChild(input);
     input.focus();
@@ -167,7 +163,11 @@ let toggleOn = () => {
         } else {
             let query = e.target.value;
             matches = fuzzyMatch(clickables, query, (string) => {
-                return `<span class="linkmagpielet" style="color: #000000">${string}</span>`;
+                let span = document.createElement("span");
+                span.className = "linkmagpielet";
+                span.style.color = "#000000";
+                span.innerText = string;
+                return span;
             });
             if (matches) {
                 focus = matches[0];
